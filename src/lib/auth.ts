@@ -3,6 +3,7 @@ import { PublicClientApplication, type AccountInfo } from '@azure/msal-browser'
 const microsoftTenantId = import.meta.env.VITE_MICROSOFT_TENANT_ID
 const microsoftClientId = import.meta.env.VITE_MICROSOFT_CLIENT_ID
 const apiScope = import.meta.env.VITE_MICROSOFT_API_SCOPE || `api://${microsoftClientId}/access_as_user`
+const authRedirectUri = `${window.location.origin}/auth/callback.html`
 
 export const isAuthConfigured = Boolean(microsoftTenantId && microsoftClientId)
 
@@ -10,7 +11,8 @@ export const authClient = new PublicClientApplication({
   auth: {
     clientId: microsoftClientId || 'missing-client-id',
     authority: microsoftTenantId ? `https://login.microsoftonline.com/${microsoftTenantId}` : undefined,
-    redirectUri: window.location.origin,
+    redirectUri: authRedirectUri,
+    postLogoutRedirectUri: window.location.origin,
   },
   cache: {
     cacheLocation: 'localStorage',
@@ -31,7 +33,7 @@ export async function initializeAuth() {
 }
 
 export async function signInMicrosoft() {
-  const result = await authClient.loginPopup(loginRequest)
+  const result = await authClient.loginPopup({ ...loginRequest, redirectUri: authRedirectUri })
   authClient.setActiveAccount(result.account)
   return result.account
 }
@@ -51,10 +53,10 @@ export async function getAccessToken() {
   if (!account) throw new Error('No hay una sesion activa.')
 
   try {
-    const result = await authClient.acquireTokenSilent({ ...loginRequest, account })
+    const result = await authClient.acquireTokenSilent({ ...loginRequest, account, redirectUri: authRedirectUri })
     return result.accessToken
   } catch {
-    const result = await authClient.acquireTokenPopup({ ...loginRequest, account })
+    const result = await authClient.acquireTokenPopup({ ...loginRequest, account, redirectUri: authRedirectUri })
     return result.accessToken
   }
 }
