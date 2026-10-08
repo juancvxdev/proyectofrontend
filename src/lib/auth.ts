@@ -3,7 +3,7 @@ import { PublicClientApplication, type AccountInfo } from '@azure/msal-browser'
 const microsoftTenantId = import.meta.env.VITE_MICROSOFT_TENANT_ID
 const microsoftClientId = import.meta.env.VITE_MICROSOFT_CLIENT_ID
 const apiScope = import.meta.env.VITE_MICROSOFT_API_SCOPE || `api://${microsoftClientId}/access_as_user`
-const authRedirectUri = `${window.location.origin}/auth/callback.html`
+const authRedirectUri = window.location.origin
 
 export const isAuthConfigured = Boolean(microsoftTenantId && microsoftClientId)
 
@@ -33,9 +33,8 @@ export async function initializeAuth() {
 }
 
 export async function signInMicrosoft() {
-  const result = await authClient.loginPopup({ ...loginRequest, redirectUri: authRedirectUri })
-  authClient.setActiveAccount(result.account)
-  return result.account
+  await authClient.loginRedirect({ ...loginRequest, redirectUri: authRedirectUri })
+  return null
 }
 
 export async function signOutMicrosoft() {
@@ -56,7 +55,7 @@ export async function getAccessToken() {
     const result = await authClient.acquireTokenSilent({ ...loginRequest, account, redirectUri: authRedirectUri })
     return result.accessToken
   } catch {
-    const result = await authClient.acquireTokenPopup({ ...loginRequest, account, redirectUri: authRedirectUri })
-    return result.accessToken
+    await authClient.acquireTokenRedirect({ ...loginRequest, account, redirectUri: authRedirectUri })
+    throw new Error('Redirigiendo para renovar la sesion.')
   }
 }
